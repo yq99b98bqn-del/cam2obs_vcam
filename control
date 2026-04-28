@@ -1,0 +1,9 @@
+Package: com.yourcompany.cam2obs-vcam
+Name: Cam2OBS Virtual Camera
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: Biến OBS thành camera ảo toàn hệ thống cho iPhone
+Maintainer: yourname
+Author: yourname
+Section: Tweaks
+Depends: firmware (>= 15.0), mobilesubstrate

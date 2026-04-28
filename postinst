@@ -1,0 +1,4 @@
+#!/bin/bash
+uicache -p /Applications/CamToggle.app
+killall mediaserverd
+exit 0
