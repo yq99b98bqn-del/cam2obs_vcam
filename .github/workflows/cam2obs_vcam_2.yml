@@ -1,4 +1,4 @@
-name: Build Cam2OBS Virtual Camera (Fast)
+name: Build Cam2OBS Virtual Camera (Fast Ubuntu)
 
 on:
   push:
@@ -7,11 +7,16 @@ on:
 
 jobs:
   build:
-    runs-on: macos-12
+    runs-on: ubuntu-latest   # ⚡ Ubuntu runner – gần như luôn có sẵn
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang make git curl unzip libavcodec-dev libavfilter-dev libavformat-dev
 
       - name: Cache Theos & SDKs
         id: cache-theos
@@ -25,10 +30,7 @@ jobs:
       - name: Setup Theos (if not cached)
         if: steps.cache-theos.outputs.cache-hit != 'true'
         run: |
-          curl -LO https://github.com/theos/theos/archive/master.zip
-          unzip master.zip -d /opt/
-          mv /opt/theos-master /opt/theos
-          rm master.zip
+          git clone --depth 1 https://github.com/theos/theos.git /opt/theos
 
       - name: Download SDKs (if not cached)
         if: steps.cache-theos.outputs.cache-hit != 'true'
@@ -39,10 +41,17 @@ jobs:
           cp -r sdks-master/*.sdk /opt/theos/sdks/
           rm -rf sdks-master master.zip
 
+      - name: Install ldid (Linux)
+        run: |
+          # tải ldid bản Linux từ Procursus
+          curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_2.1.5-procursus7_amd64.deb
+          sudo dpkg -i ldid_2.1.5-procursus7_amd64.deb
+          sudo apt-get install -f -y
+
       - name: Build package (rootless)
         run: |
           export THEOS=/opt/theos
-          cd cam2obs_vcam   # Đổi tên thư mục cho đúng
+          cd cam2obs_vcam
           make clean
           make package THEOS_PACKAGE_SCHEME=rootless
 
