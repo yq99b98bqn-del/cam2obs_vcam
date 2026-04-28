@@ -1,0 +1,53 @@
+name: Build Cam2OBS Virtual Camera (Fast)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-12
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Theos & SDKs
+        id: cache-theos
+        uses: actions/cache@v4
+        with:
+          path: /opt/theos
+          key: ${{ runner.os }}-theos-${{ hashFiles('.github/theos_version.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-theos-
+
+      - name: Setup Theos (if not cached)
+        if: steps.cache-theos.outputs.cache-hit != 'true'
+        run: |
+          curl -LO https://github.com/theos/theos/archive/master.zip
+          unzip master.zip -d /opt/
+          mv /opt/theos-master /opt/theos
+          rm master.zip
+
+      - name: Download SDKs (if not cached)
+        if: steps.cache-theos.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /opt/theos/sdks
+          curl -LO https://github.com/theos/sdks/archive/master.zip
+          unzip master.zip
+          cp -r sdks-master/*.sdk /opt/theos/sdks/
+          rm -rf sdks-master master.zip
+
+      - name: Build package (rootless)
+        run: |
+          export THEOS=/opt/theos
+          cd cam2obs_vcam   # Đổi tên thư mục cho đúng
+          make clean
+          make package THEOS_PACKAGE_SCHEME=rootless
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cam2obs-vcam-rootless
+          path: cam2obs_vcam/packages/*.deb
