@@ -1,22 +1,22 @@
-name: Build Cam2OBS Virtual Camera (Fast Ubuntu)
+name: Build Cam2OBS VCAM (Rootless - Ubuntu Fast)
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:      # Cho phép chạy thủ công
 
 jobs:
   build:
-    runs-on: ubuntu-latest   # ⚡ Ubuntu runner – gần như luôn có sẵn
+    runs-on: ubuntu-latest   # Ubuntu luôn sẵn, build rất nhanh
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare environment
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang make git curl unzip libavcodec-dev libavfilter-dev libavformat-dev
+          sudo apt-get install -y clang make git curl unzip
 
       - name: Cache Theos & SDKs
         id: cache-theos
@@ -36,23 +36,29 @@ jobs:
         if: steps.cache-theos.outputs.cache-hit != 'true'
         run: |
           mkdir -p /opt/theos/sdks
-          curl -LO https://github.com/theos/sdks/archive/master.zip
-          unzip master.zip
+          curl -L -o sdk.zip https://github.com/theos/sdks/archive/master.zip
+          unzip sdk.zip
           cp -r sdks-master/*.sdk /opt/theos/sdks/
-          rm -rf sdks-master master.zip
+          rm -rf sdk.zip sdks-master
 
       - name: Install ldid (Linux)
         run: |
-          # tải ldid bản Linux từ Procursus
-          curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_2.1.5-procursus7_amd64.deb
-          sudo dpkg -i ldid_2.1.5-procursus7_amd64.deb
-          sudo apt-get install -f -y
+          if ! command -v ldid &> /dev/null; then
+            curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_2.1.5-procursus7_amd64.deb
+            sudo dpkg -i ldid_2.1.5-procursus7_amd64.deb || sudo apt-get install -f -y
+            rm -f ldid_2.1.5-procursus7_amd64.deb
+          fi
 
       - name: Build package (rootless)
         run: |
           export THEOS=/opt/theos
+          if [ ! -d "cam2obs_vcam" ]; then
+            echo "❌ Không tìm thấy thư mục cam2obs_vcam"
+            echo "Hãy đặt toàn bộ source vào thư mục cam2obs_vcam trong repo"
+            exit 1
+          fi
           cd cam2obs_vcam
-          make clean
+          make clean || true
           make package THEOS_PACKAGE_SCHEME=rootless
 
       - name: Upload .deb artifact
